@@ -1,276 +1,441 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Truck Uptime Tracker</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PCL IT Monitor</title>
 <style>
-:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--mute:#6b7280;--line:#e3e6eb;--up:#16a34a;--down:#dc2626;--acc:#1f4e79}
-@media (prefers-color-scheme: dark){:root{--bg:#12151b;--card:#1b2029;--ink:#e6e9ef;--mute:#9aa3b2;--line:#2a313c;--acc:#5b8fc7}}
+:root{--bg:#f4f5f7;--surface:#fff;--text:#1d2330;--muted:#6b7280;--line:#dde2ea;--accent:#1f3a5f;--gold:#d4a536;
+--up:#2e7d32;--upbg:#c8e6c9;--int:#7a5f00;--intbg:#fff3b0;--down:#c62828;--downbg:#ffcdd2;--pay:#1565c0;--paybg:#bbdefb}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#121620;--surface:#1b2130;--text:#e6e9f0;--muted:#9aa3b2;--line:#2c3446;--accent:#2d4f7c;--gold:#e0b85a}}
 *{box-sizing:border-box}
-body{margin:0;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
-header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-h1{font-size:17px;margin:0 auto 0 0}
-nav button{border:0;background:none;padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--mute);font:inherit}
-nav button.on{background:var(--acc);color:#fff}
-input,select,textarea,.go{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
-.go{cursor:pointer}
-main{padding:16px;max-width:1400px;margin:auto}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
-.card b{display:block;font-size:22px}
-.card span{color:var(--mute);font-size:12px}
-table{border-collapse:collapse;width:100%;background:var(--card)}
-th,td{border:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap}
-th{background:var(--bg);position:sticky;top:0;z-index:2}
-.grid{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px;margin-bottom:16px}
-td.c,th.c{text-align:center;min-width:40px;padding:4px 2px}
-td.c{cursor:pointer;user-select:none}
-td.d{background:var(--down);color:#fff;font-weight:600}
-.sticky1,.sticky2{position:sticky;z-index:1;background:var(--card)}
-.sticky1{left:0;min-width:70px}
-.sticky2{left:70px;min-width:90px}
-th.sticky1,th.sticky2{z-index:3;background:var(--bg)}
-.bar{height:8px;background:var(--line);border-radius:4px;min-width:120px}
-.bar i{display:block;height:100%;background:var(--up);border-radius:4px}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
-.hide{display:none}
-.muted{color:var(--mute)}
-.empty{padding:30px;text-align:center;color:var(--mute)}
-textarea{width:100%;height:200px;font:12px monospace}
-.chart{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:16px}
-.chart b{font-size:13px}
-.chart svg{display:block}
-.btn-red{color:var(--down);background:none;border:1px solid var(--down);border-radius:6px;padding:3px 8px;cursor:pointer;font:inherit}
-</style></head>
+body{margin:0;font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+header{background:var(--accent);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+header h1{font-size:18px;margin:0}
+header small{opacity:.8;display:block;font-size:12px}
+header label{font-size:12px;display:flex;flex-direction:column;gap:2px}
+nav{display:flex;gap:2px;background:var(--surface);border-bottom:1px solid var(--line);padding:0 12px;overflow-x:auto;position:sticky;top:0;z-index:9}
+nav button{background:none;border:0;border-bottom:3px solid transparent;border-radius:0;padding:12px 14px;color:var(--muted);font-weight:600;white-space:nowrap}
+nav button.on{color:var(--accent);border-bottom-color:var(--gold)}
+main{max-width:1400px;margin:0 auto;padding:18px}
+h2{font-size:16px;margin:0 0 4px}
+h3{font-size:14px;margin:14px 0 6px}
+p.hint{color:var(--muted);font-size:12px;margin:6px 0 0}
+input,select,button{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px}
+button{cursor:pointer}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.ghost{border-color:transparent;color:var(--accent)}
+button.danger{color:var(--down)}
+header select,header input{background:#fff;color:#1d2330;border-color:transparent}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:end}
+.row.between{justify-content:space-between;align-items:center}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px}
+.stat .n{font-size:26px;font-weight:700;color:var(--accent)}
+.stat .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border:1px solid var(--line);padding:5px 7px;text-align:center;white-space:nowrap}
+th{background:var(--bg);font-weight:600}
+td.name,th.name{text-align:left;min-width:180px;position:sticky;left:0;background:var(--surface);z-index:1}
+td select{padding:2px 3px;font-size:12px;border-radius:4px;width:46px}
+th.today,td.today{outline:2px solid var(--gold);outline-offset:-2px}
+.s-up{background:var(--upbg);color:var(--up)}.s-int{background:var(--intbg);color:var(--int)}
+.s-down{background:var(--downbg);color:var(--down)}.s-pay{background:var(--paybg);color:var(--pay)}
+.chip{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;margin-right:6px}
+.muted{color:var(--muted);font-size:12px}
+.bold{font-weight:700}
+.empty{color:var(--muted);text-align:center;padding:24px}
+form.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+form.grid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+form.grid label input,form.grid label select{color:var(--text)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--accent);color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:20}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+ol.steps li,ul.tips li{margin-bottom:6px}
+dl dt{font-weight:700;margin-top:8px}dl dd{margin:2px 0 0 0;color:var(--muted)}
+</style>
+</head>
 <body>
 <header>
-  <h1>Truck Uptime Tracker</h1>
-  <input type="month" id="month">
-  <nav id="nav"></nav>
+  <div><h1>PCL IT Monitor</h1><small>Head Office and branch IT status</small></div>
+  <div class="row">
+    <label>Reporting month<input type="month" id="month"></label>
+  </div>
 </header>
-<main>
-  <section id="v-dash"></section>
-
-  <section id="v-daily" class="hide">
-    <div class="row"><input id="srch" placeholder="Search truck or plate"><span class="muted">Tap a cell to mark DOWN; tap again to clear. Cause is optional.</span></div>
-    <div id="dgrid"></div>
-  </section>
-
-  <section id="v-log" class="hide">
-    <div class="row">
-      <input type="date" id="fdate">
-      <select id="ftruck"></select>
-      <select id="fcause"></select>
-      <input id="fnote" placeholder="Explanation" size="30">
-      <button class="go" id="fadd">Add entry</button>
-    </div>
-    <div id="logt"></div>
-    <dialog id="cdlg" style="background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:16px">
-      <h3 style="margin-top:0">Cause of downtime</h3>
-      <select id="csel"></select>
-      <div class="row"><button class="go" id="cok">Mark down</button><button class="go" id="cno">Cancel</button></div>
-    </dialog>
-  </section>
-
-  <section id="v-data" class="hide">
-    <p class="muted" id="counts"></p>
-    <div class="row">
-      <select id="mode"><option value="fleet">Fleet (TRUCK MASTER sheet)</option><option value="down">Downtime (DOWNTIME DETAILS sheet)</option></select>
-      <button class="go" id="imp">Import pasted rows</button>
-      <button class="go" id="clr">Clear all data</button>
-    </div>
-    <textarea id="paste" placeholder="In Excel, select the sheet's columns, press Ctrl+C, then paste here with Ctrl+V."></textarea>
-    <p class="muted">Fleet columns: Truck, Plate, Brand, Model, Size (replaces the current fleet). Downtime columns: Date, Truck, Cause, Explanation (added; exact duplicates are skipped). Header rows are skipped automatically.</p>
-  </section>
-</main>
+<nav id="nav">
+  <button data-tab="home">Home</button>
+  <button data-tab="monitor">Daily Monitor</button>
+  <button data-tab="inventory">Inventory</button>
+  <button data-tab="summary">Summary</button>
+  <button data-tab="help">Help</button>
+</nav>
+<main><div id="view"></div></main>
+<div class="toast" id="toast"></div>
 
 <script>
-const KEY='uptime-tracker-v1';
-const $=s=>document.querySelector(s);
-const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-let st={fleet:[],events:[]};
-try{st=Object.assign(st,JSON.parse(localStorage.getItem(KEY))||{})}catch(e){}
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){alert('Could not save in this browser.')}};
-const pad=n=>String(n).padStart(2,'0');
-const now=new Date(), todayStr=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
-let month=todayStr.slice(0,7), tab='dash', q='';
-const TABS=[['dash','Dashboard'],['daily','Daily grid'],['log','Downtime log'],['data','Fleet & import']];
-const CAUSES=['MECHANICAL','ELECTRICAL','TIRE','ACCIDENT / BODY DAMAGE','PREVENTIVE MAINTENANCE','PARTS UNAVAILABLE','ENGINE','RADIATOR / ACCIDENT','COOLING SYSTEM','ENGINE / TRANSMISSION','ELECTRICAL / MCU','REPAINTING','BATTERY'];
-let pend=null;
-const causeOpts=sel=>{const all=[...new Set([...CAUSES,...(st.custom||[])])];if(sel&&!all.includes(sel))all.push(sel);return '<option value="">— select —</option>'+all.map(c=>`<option value="${esc(c)}"${c===sel?' selected':''}>${esc(c)}</option>`).join('')+'<option value="__new">+ Add new cause…</option>'};
-function addCause(){const n=(prompt('New cause name:')||'').trim().toUpperCase();if(!n)return null;st.custom=st.custom||[];if(![...CAUSES,...st.custom].includes(n))st.custom.push(n);save();return n}
+const KEY = "pcl-it-monitor-v1"; // same key as v1, so your saved data carries over
+const SITES = ["Head Office","Banner","Batangas","Cavite","Meta","MTH","Paco","Pasig","Taylor"];
+const TYPES = ["Desktop","Laptop","Printer","Internet"];
+const WEEKS = [[1,7],[8,14],[15,21],[22,28],[29,31]];
+const STATUS_CLASS = {"Up":"s-up","Intermittent":"s-int","Down":"s-down","Payment Issue":"s-pay"};
 
-const daysIn=()=>{const [y,m]=month.split('-').map(Number);return new Date(y,m,0).getDate()};
-const ds=d=>`${month}-${pad(d)}`;
-const byDay=()=>{const m={};st.events.forEach(e=>{(m[e.date]=m[e.date]||new Set()).add(e.truck)});return m};
-const dayStat=(d,map)=>{const k=ds(d);if(k>todayStr)return null;const n=st.fleet.length,dn=map[k]?map[k].size:0;return{down:dn,up:n?(n-dn)/n*100:null}};
-const pct=v=>v==null?'—':v.toFixed(2)+'%';
+const $ = s => document.querySelector(s);
+const pad = n => String(n).padStart(2,"0");
+const uid = () => Math.random().toString(36).slice(2,10);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const thisMonth = () => { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth()+1); };
+const todayDay = () => new Date().getDate();
+const daysIn = m => { const [y, mo] = m.split("-").map(Number); return new Date(y, mo, 0).getDate(); };
+const pct = (c, n) => n ? Math.round(c / n * 100) + "%" : "–";
 
-function bars(labels,vals,o){
-  const W=900,H=240,P=44,B=22,T=12;
-  const nn=vals.filter(v=>v!=null);
-  const mn=nn.length?Math.min(...nn):0, mx0=nn.length?Math.max(...nn):0;
-  const lo=o.zero?0:Math.max(0,Math.floor(mn)-1), hi=Math.max(o.max??mx0,lo+1);
-  const Y=v=>H-B-((v-lo)/(hi-lo))*(H-B-T), bw=(W-P)/Math.max(labels.length,1);
-  const rects=vals.map((v,i)=>v==null?'':`<rect x="${(P+i*bw+bw*.15).toFixed(1)}" y="${Y(v).toFixed(1)}" width="${(bw*.7).toFixed(1)}" height="${Math.max(0,Y(lo)-Y(v)).toFixed(1)}" fill="${o.color}"><title>${labels[i]}: ${o.fmt(v)}</title></rect>`).join('');
-  const lab=labels.map((l,i)=>`<text x="${(P+i*bw+bw/2).toFixed(1)}" y="${H-6}" font-size="10" text-anchor="middle" fill="var(--mute)">${l}</text>`).join('');
-  const tk=[lo,(lo+hi)/2,hi].map(t=>`<text x="${P-6}" y="${(Y(t)+4).toFixed(1)}" font-size="10" text-anchor="end" fill="var(--mute)">${o.fmt(t)}</text><line x1="${P}" x2="${W}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="var(--line)"/>`).join('');
-  return `<div class="chart"><b>${o.title}</b><svg viewBox="0 0 ${W} ${H}" width="100%">${tk}${rects}${lab}</svg></div>`;
+function seed(){
+  const s = { assets: [], logs: {} };
+  const isp = { "Head Office": ["EASTERN","-"], "Paco": ["STARLINK","-"], "Pasig": ["DITO","-"] };
+  SITES.forEach(site => {
+    const [main, backup] = isp[site] || ["-","-"];
+    s.assets.push({ id: uid(), type: "Internet", site, tag: "", user: main, position: backup, model: "", remarks: "" });
+  });
+  return s;
 }
-function monthUp(ym){
-  const n=st.fleet.length; if(!n) return null;
-  const map=byDay(), [y,m]=ym.split('-').map(Number), D=new Date(y,m,0).getDate();
-  let s=0,c=0;
-  for(let d=1;d<=D;d++){const k=`${ym}-${pad(d)}`; if(k>todayStr) break; s+=(n-(map[k]?map[k].size:0))/n*100; c++}
-  return c?s/c:null;
+function load(){
+  try { const raw = localStorage.getItem(KEY); if (raw) return JSON.parse(raw); } catch (e) {}
+  return seed();
+}
+let state = load();
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(state)); }
+  catch (e) { toast("Could not save in this browser. Please export a backup."); }
 }
 
-function rDash(){
-  const el=$('#v-dash');
-  if(!st.fleet.length){el.innerHTML='<div class="empty">Import your fleet first (Fleet & import tab).</div>';return}
-  const map=byDay(),D=daysIn(),n=st.fleet.length;
-  const me=st.events.filter(e=>e.date.startsWith(month));
-  const days=[...Array(D)].map((_,i)=>({d:i+1,s:dayStat(i+1,map)})).filter(x=>x.s);
-  const ups=days.filter(x=>x.s.up!=null).map(x=>x.s.up);
-  const avg=ups.length?ups.reduce((a,b)=>a+b,0)/ups.length:null;
-  const wk=[[1,7],[8,14],[15,21],[22,D]].filter(([a])=>ds(a)<=todayStr).map(([a,b],i)=>{
-    const ev=me.filter(e=>+e.date.slice(8)>=a&&+e.date.slice(8)<=b);
-    const u=days.filter(x=>x.d>=a&&x.d<=b&&x.s.up!=null).map(x=>x.s.up);
-    return `<tr><td>Week ${i+1}</td><td>${a}–${b}</td><td>${pct(u.length?u.reduce((p,c)=>p+c,0)/u.length:null)}</td><td>${ev.length}</td><td>${new Set(ev.map(e=>e.truck)).size}</td></tr>`;
-  }).join('');
-  const dr=days.map(({d,s})=>`<tr><td>${ds(d)}</td><td>${s.down}</td><td>${pct(s.up)}</td><td><div class="bar"><i style="width:${s.up||0}%"></i></div></td></tr>`).join('');
-  const lbl=[...Array(D)].map((_,i)=>i+1), all=[...Array(D)].map((_,i)=>dayStat(i+1,map));
-  const ms=[...new Set([...st.events.map(e=>e.date.slice(0,7)),month])].sort();
-  const charts=`${bars(lbl,all.map(s=>s?s.up:null),{max:100,fmt:v=>v.toFixed(1)+'%',color:'var(--up)',title:'Daily uptime %'})}
-    ${bars(lbl,all.map(s=>s?s.down:null),{zero:true,fmt:v=>Math.round(v)+'',color:'var(--down)',title:'Units down per day'})}
-    ${bars(ms,ms.map(monthUp),{max:100,fmt:v=>v.toFixed(1)+'%',color:'var(--acc)',title:'Monthly uptime %'})}`;
-  el.innerHTML=`<div class="cards">
-    <div class="card"><span>Average uptime</span><b>${pct(avg)}</b></div>
-    <div class="card"><span>Down events</span><b>${me.length}</b></div>
-    <div class="card"><span>Trucks affected</span><b>${new Set(me.map(e=>e.truck)).size}</b></div>
-    <div class="card"><span>Fleet size</span><b>${n}</b></div></div>
-    ${charts}
-    <h3>Weekly</h3>
-    <div class="grid"><table><tr><th>Week</th><th>Days</th><th>Avg uptime</th><th>Down events</th><th>Trucks affected</th></tr>${wk}</table></div>
-    <h3>Daily</h3>
-    <div class="grid"><table><tr><th>Date</th><th>Units down</th><th>Uptime</th><th></th></tr>${dr}</table></div>`;
-}
+const ui = { tab: "home", month: thisMonth(), site: SITES[0], type: "Desktop", day: todayDay(),
+  period: "month", week: 1, stype: "All", f: { site: "All", type: "All", q: "" }, form: null };
+$("#month").value = ui.month;
 
-function drawGrid(){
-  const g=$('#dgrid');
-  if(!st.fleet.length){g.innerHTML='<div class="empty">Import your fleet first (Fleet & import tab).</div>';return}
-  const map=byDay(),D=daysIn(),on=new Set(st.events.map(e=>e.date+'|'+e.truck));
-  const days=[...Array(D)].map((_,i)=>i+1);
-  const up=days.map(d=>{const s=dayStat(d,map);return `<td class="c">${s?Math.round(s.up)+'%':''}</td>`}).join('');
-  const body=st.fleet.filter(t=>!q||(t.truck+' '+t.plate).toLowerCase().includes(q)).map(t=>
-    `<tr><td class="sticky1">${esc(t.truck)}</td><td class="sticky2">${esc(t.plate)}</td>`+
-    days.map(d=>{const k=ds(d),x=on.has(k+'|'+t.truck);return `<td class="c${x?' d':''}" data-d="${k}" data-t="${esc(t.truck)}">${x?'D':''}</td>`}).join('')+'</tr>').join('');
-  g.innerHTML=`<div class="grid"><table>
-    <tr><th class="sticky1">Truck</th><th class="sticky2">Plate</th>${days.map(d=>`<th class="c">${d}</th>`).join('')}</tr>
-    <tr><td class="sticky1"><b>Uptime</b></td><td class="sticky2"></td>${up}</tr>${body}</table></div>`;
+/* ---------- helpers ---------- */
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 2400);
 }
-
-function rLog(){
-  const plate=t=>(st.fleet.find(f=>f.truck===t)||{}).plate||'';
-  const rows=st.events.map((e,i)=>({e,i})).filter(x=>x.e.date.startsWith(month))
-    .sort((a,b)=>a.e.date.localeCompare(b.e.date)||a.e.truck.localeCompare(b.e.truck));
-  $('#logt').innerHTML=rows.length?`<div class="grid"><table>
-    <tr><th>Date</th><th>Truck</th><th>Plate</th><th>Cause</th><th>Explanation</th><th></th></tr>
-    ${rows.map(({e,i})=>`<tr><td>${e.date}</td><td>${esc(e.truck)}</td><td>${esc(plate(e.truck))}</td>
-    <td><select data-i="${i}" data-f="cause">${causeOpts(e.cause)}</select></td>
-    <td><input data-i="${i}" data-f="note" value="${esc(e.note)}" size="40"></td>
-    <td><button class="btn-red" data-del="${i}">Delete</button></td></tr>`).join('')}</table></div>`
-    :'<div class="empty">No downtime logged for this month.</div>';
-  $('#fcause').innerHTML=causeOpts('');
-  $('#ftruck').innerHTML=st.fleet.map(t=>`<option value="${esc(t.truck)}">${esc(t.truck)} · ${esc(t.plate)}</option>`).join('');
-  if(!$('#fdate').value.startsWith(month)) $('#fdate').value=month===todayStr.slice(0,7)?todayStr:ds(1);
-}
-
-function rData(){
-  $('#counts').textContent=`Fleet: ${st.fleet.length} trucks · Downtime entries stored: ${st.events.length}`;
-}
-
-function rowsOf(txt){
-  return txt.trim().split(/\r?\n/).filter(Boolean).map(l=>(l.includes('\t')?l.split('\t'):l.split(',')).map(s=>s.trim().replace(/^"|"$/g,'')));
-}
-const tn=s=>{const m=String(s).match(/\d+/);return m?'# '+m[0].padStart(3,'0'):''};
-const dn=s=>{
-  let m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return m[0];
-  m=String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  return m?`${m[3]}-${pad(m[1])}-${pad(m[2])}`:'';
-};
-
-function doImport(){
-  const rows=rowsOf($('#paste').value), mode=$('#mode').value;
-  if(!$('#paste').value.trim()) return alert('Paste rows first.');
-  if(mode==='fleet'){
-    const f=rows.map(r=>({truck:tn(r[0]),plate:r[1]||'',brand:r[2]||'',model:r[3]||'',size:r[4]||''})).filter(t=>t.truck);
-    if(!f.length) return alert('No truck rows found.');
-    st.fleet=f; save(); $('#paste').value=''; alert(`Imported ${f.length} trucks.`);
-  } else {
-    const seen=new Set(st.events.map(e=>[e.date,e.truck,e.cause,e.note].join('|')));
-    let added=0,skipped=0;
-    rows.forEach(r=>{
-      const date=dn(r[0]), truck=tn(r[1]);
-      if(!date||!truck){skipped++;return}
-      const cause=r[2]||'', note=r[3]||'', k=[date,truck,cause,note].join('|');
-      if(seen.has(k)){skipped++;return}
-      seen.add(k); st.events.push({date,truck,cause,note}); added++;
+function agg(assets, months, lo, hi){
+  const vals = [];
+  months.forEach(m => {
+    const log = state.logs[m]; if (!log) return;
+    const dim = daysIn(m);
+    assets.forEach(a => {
+      const L = log[a.id]; if (!L) return;
+      for (let d = lo; d <= Math.min(hi, dim); d++) if (L[d]) vals.push(L[d]);
     });
-    save(); $('#paste').value=''; alert(`Imported ${added} entries (${skipped} skipped).`);
-  }
-  render();
+  });
+  const c = { "Up":0, "Down":0, "Intermittent":0, "Payment Issue":0 };
+  vals.forEach(v => { if (c[v] !== undefined) c[v]++; });
+  const n = vals.length;
+  return { n, up: pct(c.Up, n), down: pct(c.Down, n), int: pct(c.Intermittent, n), pay: pct(c["Payment Issue"], n) };
+}
+function cellSelect(a, d, v, opts){
+  return `<select data-cell="1" data-id="${a.id}" data-day="${d}" class="${STATUS_CLASS[v] || ""}" aria-label="${esc(a.tag||a.user)} day ${d}">` +
+    opts.map(o => `<option value="${o}" ${o === (v || "") ? "selected" : ""}>${o || "·"}</option>`).join("") + `</select>`;
+}
+function assetName(a){
+  return a.type === "Internet"
+    ? `<b>${esc(a.user || "-")}</b><div class="muted">Backup: ${esc(a.position || "-")}</div>`
+    : `<b>${esc(a.tag || "(no tag)")}</b><div class="muted">${esc(a.user || "")}${a.position ? " · " + esc(a.position) : ""}</div>`;
+}
+function legend(withPay){
+  return `<div class="muted" style="margin:6px 0">
+    <span class="chip s-up">Up</span><span class="chip s-int">Intermittent</span><span class="chip s-down">Down</span>
+    ${withPay ? '<span class="chip s-pay">Payment Issue</span>' : ""}<span>· blank = not recorded</span></div>`;
 }
 
+/* ---------- Home ---------- */
+function renderHome(){
+  const m = ui.month, all = state.assets, net = all.filter(a => a.type === "Internet");
+  const overall = agg(all, [m], 1, 31), inet = agg(net, [m], 1, 31);
+  const isNow = m === thisMonth(), today = todayDay();
+  const downToday = isNow ? all.filter(a => ((state.logs[m] || {})[a.id] || {})[today] === "Down").length : null;
+  const byType = TYPES.map(t => `${all.filter(a => a.type === t).length} ${t}`).join(" · ");
+
+  $("#view").innerHTML = `
+  <div class="stats">
+    <div class="stat"><div class="n">${all.length}</div><div class="l">Assets tracked</div><div class="muted">${byType}</div></div>
+    <div class="stat"><div class="n">${overall.up}</div><div class="l">Overall uptime</div><div class="muted">${overall.n} recorded checks this month</div></div>
+    <div class="stat"><div class="n">${inet.up}</div><div class="l">Internet uptime</div><div class="muted">${inet.down} down · ${inet.int} intermittent</div></div>
+    <div class="stat"><div class="n">${downToday ?? "–"}</div><div class="l">Down today</div><div class="muted">${isNow ? "Assets marked Down today" : "Current month only"}</div></div>
+  </div>
+  <div class="card">
+    <div class="row between"><div><h2>Sites this month</h2><p class="hint">Click a site to open its daily grid.</p></div>
+      <div class="row"><button class="primary" data-tab="monitor">Open Daily Monitor</button><button data-tab="inventory">Manage inventory</button></div></div>
+    <div class="wrap" style="margin-top:10px"><table>
+      <thead><tr><th class="name">Site</th><th>Assets</th><th>UP%</th><th>DOWN%</th><th>INT%</th><th>Records</th></tr></thead>
+      <tbody>${SITES.map(s => {
+        const sa = all.filter(a => a.site === s), r = agg(sa, [m], 1, 31);
+        return `<tr><td class="name"><button class="ghost" data-goto-site="${esc(s)}">${esc(s)}</button></td>
+          <td>${sa.length}</td><td class="bold">${r.up}</td><td>${r.down}</td><td>${r.int}</td><td>${r.n}</td></tr>`;
+      }).join("")}</tbody>
+    </table></div>
+  </div>`;
+}
+
+/* ---------- Daily Monitor ---------- */
+function monitorRows(){
+  return state.assets.filter(a => a.site === ui.site && a.type === ui.type);
+}
+function renderMonitor(){
+  const n = daysIn(ui.month), m = ui.month, log = state.logs[m] || {};
+  const days = Array.from({length: n}, (_, i) => i + 1);
+  const rows = monitorRows();
+  const isNow = m === thisMonth();
+  const opts = ["", "Up", "Intermittent", "Down"].concat(ui.type === "Internet" ? ["Payment Issue"] : []);
+  if (ui.day > n) ui.day = n;
+
+  const body = rows.length ? rows.map(a => {
+    const L = log[a.id] || {};
+    const r = agg([a], [m], 1, n);
+    return `<tr><td class="name">${assetName(a)}</td>` +
+      days.map(d => `<td class="${isNow && d === todayDay() ? "today" : ""}">${cellSelect(a, d, L[d], opts)}</td>`).join("") +
+      `<td class="bold">${r.up}</td><td>${r.down}</td><td>${r.int}</td></tr>`;
+  }).join("") : "";
+
+  $("#view").innerHTML = `
+  <div class="card">
+    <div class="row between">
+      <div class="row">
+        <label class="muted">Site<select data-ui="site">${SITES.map(s => `<option ${s === ui.site ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+        <label class="muted">Type<select data-ui="type">${TYPES.map(t => `<option ${t === ui.type ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+      </div>
+      <div class="row">
+        <label class="muted">Day<select data-ui="day">${days.map(d => `<option value="${d}" ${d === ui.day ? "selected" : ""}>${d}</option>`).join("")}</select></label>
+        <button data-action="fill-day" title="Sets every blank cell for this day to Up">Mark blanks Up for day ${ui.day}</button>
+        <button data-action="export-monitor">Export CSV</button>
+      </div>
+    </div>
+    <p class="hint">Pick a status in any cell. Changes save automatically. Today's column is outlined in gold.</p>
+    ${legend(ui.type === "Internet")}
+    ${rows.length ? `<div class="wrap"><table>
+      <thead><tr><th class="name">Asset</th>${days.map(d => `<th class="${isNow && d === todayDay() ? "today" : ""}">${d}</th>`).join("")}<th>UP%</th><th>DOWN%</th><th>INT%</th></tr></thead>
+      <tbody>${body}</tbody></table></div>`
+      : `<div class="empty">No ${ui.type} assets at ${esc(ui.site)} yet. <br><button class="primary" style="margin-top:10px" data-tab="inventory">Add one in Inventory</button></div>`}
+  </div>`;
+}
+
+/* ---------- Inventory ---------- */
+function formHTML(a){
+  const isNet = (a.type || "Desktop") === "Internet";
+  return `<form class="grid" id="assetForm">
+    <input type="hidden" name="id" value="${a ? a.id : ""}">
+    <label>Type<select name="type">${TYPES.map(t => `<option ${t === (a?.type || "Desktop") ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+    <label>Site<select name="site">${SITES.map(s => `<option ${s === (a?.site || ui.site) ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+    <label>Asset tag or name<input name="tag" value="${esc(a?.tag)}"></label>
+    <label><span data-lbl="user">${isNet ? "Main ISP" : "User"}</span><input name="user" value="${esc(a?.user)}"></label>
+    <label><span data-lbl="position">${isNet ? "Backup ISP" : "Position"}</span><input name="position" value="${esc(a?.position)}"></label>
+    <label>Model or brand<input name="model" value="${esc(a?.model)}"></label>
+    <label>Remarks<input name="remarks" value="${esc(a?.remarks)}"></label>
+    <label><span>&nbsp;</span><span class="row"><button class="primary" type="submit">${a ? "Save changes" : "Add asset"}</button><button type="button" data-action="cancel-form">Cancel</button></span></label>
+  </form>`;
+}
+function renderInventory(){
+  const f = ui.f, q = f.q.toLowerCase();
+  const rows = state.assets.filter(a =>
+    (f.site === "All" || a.site === f.site) && (f.type === "All" || a.type === f.type) &&
+    (!q || [a.tag, a.user, a.position, a.model, a.remarks].join(" ").toLowerCase().includes(q)))
+    .sort((a, b) => a.site.localeCompare(b.site) || a.type.localeCompare(b.type));
+  const editing = ui.form && ui.form !== "new" ? state.assets.find(a => a.id === ui.form) : null;
+
+  $("#view").innerHTML = `
+  <div class="row between" style="margin-bottom:12px">
+    <div><h2>Inventory</h2><p class="hint">${state.assets.length} assets in total. Use the filters to find one, or add a new one.</p></div>
+    <div class="row"><button class="primary" data-action="new-asset">+ New asset</button><button data-action="export-inv">Export CSV</button></div>
+  </div>
+  ${ui.form ? `<div class="card"><h3 style="margin-top:0">${editing ? "Edit asset" : "New asset"}</h3>${formHTML(editing)}
+    <p class="hint">For Internet rows, "Main ISP" and "Backup ISP" are used instead of User and Position.</p></div>` : ""}
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <label class="muted">Site<select data-f="site"><option>All</option>${SITES.map(s => `<option ${s === f.site ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></label>
+      <label class="muted">Type<select data-f="type"><option>All</option>${TYPES.map(t => `<option ${t === f.type ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+      <label class="muted">Search<input data-f="q" value="${esc(f.q)}" placeholder="Tag, user, model…"></label>
+    </div>
+    ${rows.length ? `<div class="wrap"><table>
+      <thead><tr><th>Site</th><th>Type</th><th>Tag or name</th><th>User / Main ISP</th><th>Position / Backup ISP</th><th>Model</th><th>Remarks</th><th></th></tr></thead>
+      <tbody>${rows.map(a => `<tr>
+        <td>${esc(a.site)}</td><td>${a.type}</td><td>${esc(a.tag)}</td><td>${esc(a.user)}</td><td>${esc(a.position)}</td>
+        <td>${esc(a.model)}</td><td>${esc(a.remarks)}</td>
+        <td><button class="ghost" data-edit="${a.id}">Edit</button> <button class="danger" data-del="${a.id}">Delete</button></td></tr>`).join("")}</tbody>
+    </table></div>` : `<div class="empty">No assets match these filters.</div>`}
+  </div>`;
+}
+
+/* ---------- Summary ---------- */
+function summaryScope(){
+  const y = ui.month.slice(0,4);
+  if (ui.period === "year") return { months: Array.from({length:12}, (_, i) => `${y}-${pad(i+1)}`), lo: 1, hi: 31,
+    label: `Year ${y} (all recorded days in the year)` };
+  if (ui.period === "week") { const [lo, hi] = WEEKS[ui.week-1];
+    return { months: [ui.month], lo, hi, label: `Week ${ui.week} of ${ui.month} (days ${lo}–${hi})` }; }
+  return { months: [ui.month], lo: 1, hi: 31, label: `Month ${ui.month}` };
+}
+function renderSummary(){
+  const sc = summaryScope();
+  const pool = state.assets.filter(a => ui.stype === "All" || a.type === ui.stype);
+  const rows = SITES.map(s => ({ name: s, ...agg(pool.filter(a => a.site === s), sc.months, sc.lo, sc.hi) }));
+  rows.push({ name: "All sites", ...agg(pool, sc.months, sc.lo, sc.hi) });
+
+  $("#view").innerHTML = `
+  <div class="card">
+    <div class="row between" style="margin-bottom:10px">
+      <div class="row">
+        <label class="muted">Period<select data-ui="period">${["week","month","year"].map(p => `<option value="${p}" ${p === ui.period ? "selected" : ""}>${p[0].toUpperCase() + p.slice(1)}ly</option>`).join("")}</select></label>
+        ${ui.period === "week" ? `<label class="muted">Week<select data-ui="week">${WEEKS.map((w, i) => `<option value="${i+1}" ${i+1 === ui.week ? "selected" : ""}>Week ${i+1} (days ${w[0]}–${w[1]})</option>`).join("")}</select></label>` : ""}
+        <label class="muted">Asset type<select data-ui="stype"><option>All</option>${TYPES.map(t => `<option ${t === ui.stype ? "selected" : ""}>${t}</option>`).join("")}</select></label>
+      </div>
+      <span class="muted">${sc.label}</span>
+    </div>
+    <div class="wrap"><table>
+      <thead><tr><th class="name">Site</th><th>Records</th><th>UP%</th><th>DOWN%</th><th>INT%</th><th>Payment Issue%</th></tr></thead>
+      <tbody>${rows.map(r => `<tr class="${r.name === "All sites" ? "bold" : ""}">
+        <td class="name">${esc(r.name)}</td><td>${r.n}</td><td class="bold">${r.up}</td><td>${r.down}</td><td>${r.int}</td><td>${r.pay}</td></tr>`).join("")}</tbody>
+    </table></div>
+    <p class="hint">Percentages count recorded days only. Blank days are left out.</p>
+  </div>`;
+}
+
+/* ---------- Help ---------- */
+function renderHelp(){
+  $("#view").innerHTML = `
+  <div class="card">
+    <h2>How to use PCL IT Monitor</h2>
+    <p class="hint">The full manual is in the file PCL-IT-Monitor-Manual.md. The quick version is below.</p>
+    <h3>Daily routine</h3>
+    <ol class="steps">
+      <li>Open <b>Daily Monitor</b>, pick the site and the asset type.</li>
+      <li>Choose a status in each cell for today's date. Use the <b>Day</b> selector to record earlier days.</li>
+      <li>Use <b>Mark blanks Up</b> to fill in every empty cell for a day when everything was working.</li>
+    </ol>
+    <h3>Statuses</h3>
+    <dl>
+      <dt><span class="chip s-up">Up</span></dt><dd>Working normally all day.</dd>
+      <dt><span class="chip s-int">Intermittent</span></dt><dd>Working, but with drops or slowdowns.</dd>
+      <dt><span class="chip s-down">Down</span></dt><dd>Not working.</dd>
+      <dt><span class="chip s-pay">Payment Issue</span></dt><dd>Internet service suspended for non-payment (Internet rows only).</dd>
+    </dl>
+    <h3>Managing assets</h3>
+    <ul class="tips">
+      <li>Use <b>Inventory</b> to add, edit, or delete assets. Deleting also removes that asset's recorded history.</li>
+      <li>Internet rows use Main ISP and Backup ISP in place of User and Position.</li>
+    </ul>
+    <h3>Backup and restore</h3>
+    <p class="hint">Data is saved in this browser only. Back it up regularly.</p>
+    <div class="row" style="margin-top:8px">
+      <button class="primary" data-action="backup">Download backup</button>
+      <label class="muted">Restore from backup <input type="file" accept="application/json" data-restore="1"></label>
+    </div>
+  </div>`;
+}
+
+/* ---------- Shell ---------- */
 function render(){
-  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
-  TABS.forEach(([k])=>$('#v-'+k).classList.toggle('hide',k!==tab));
-  if(tab==='dash')rDash();
-  if(tab==='daily')drawGrid();
-  if(tab==='log')rLog();
-  if(tab==='data')rData();
+  document.querySelectorAll("nav [data-tab]").forEach(b => b.classList.toggle("on", b.dataset.tab === ui.tab));
+  ({ home: renderHome, monitor: renderMonitor, inventory: renderInventory, summary: renderSummary, help: renderHelp })[ui.tab]();
 }
+function download(name, text, mime){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function csvOf(rows){ return rows.map(r => r.map(c => `"${String(c ?? "").replace(/"/g,'""')}"`).join(",")).join("\n"); }
 
-document.body.addEventListener('click',e=>{
-  const t=e.target;
-  const nb=t.closest('#nav button');
-  if(nb){tab=nb.dataset.t;render();return}
-  const cell=t.closest('td[data-d]');
-  if(cell){
-    const d=cell.dataset.d, tr=cell.dataset.t;
-    if(st.events.some(x=>x.date===d&&x.truck===tr)) st.events=st.events.filter(x=>!(x.date===d&&x.truck===tr));
-    else{
-      pend={d,tr};$('#csel').innerHTML=causeOpts('');$('#cdlg').showModal();return;
-    }
-    save(); render(); return;
+/* ---------- Events ---------- */
+document.addEventListener("click", e => {
+  const el = e.target.closest("[data-tab],[data-action],[data-edit],[data-del],[data-goto-site]");
+  if (!el) return;
+  if (el.dataset.tab) { ui.tab = el.dataset.tab; ui.form = null; render(); window.scrollTo(0,0); return; }
+  if (el.dataset.gotoSite) { ui.site = el.dataset.gotoSite; ui.tab = "monitor"; render(); return; }
+  if (el.dataset.edit) { ui.form = el.dataset.edit; render(); window.scrollTo(0,0); return; }
+  if (el.dataset.del) {
+    const a = state.assets.find(x => x.id === el.dataset.del);
+    if (!a || !confirm(`Delete "${a.tag || a.user || a.type}" at ${a.site} and all its recorded history?`)) return;
+    state.assets = state.assets.filter(x => x.id !== a.id);
+    Object.values(state.logs).forEach(m => delete m[a.id]);
+    save(); render(); toast("Asset deleted"); return;
   }
-  if(t.dataset.del!==undefined){
-    if(confirm('Delete this downtime entry?')){st.events.splice(+t.dataset.del,1);save();render()}
+  switch (el.dataset.action) {
+    case "new-asset": ui.form = "new"; render(); window.scrollTo(0,0); break;
+    case "cancel-form": ui.form = null; render(); break;
+    case "fill-day": {
+      const m = ui.month, d = ui.day; let count = 0;
+      state.logs[m] = state.logs[m] || {};
+      monitorRows().forEach(a => {
+        const L = state.logs[m][a.id] = state.logs[m][a.id] || {};
+        if (!L[d]) { L[d] = "Up"; count++; }
+      });
+      save(); render(); toast(count ? `Set ${count} blank cell(s) to Up for day ${d}` : "No blank cells to fill for this day");
+      break;
+    }
+    case "export-monitor": {
+      const m = ui.month, n = daysIn(m), log = state.logs[m] || {};
+      const rows = monitorRows().map(a => {
+        const L = log[a.id] || {}; const vals = Array.from({length:n}, (_, i) => L[i+1] || "");
+        const r = agg([a], [m], 1, n);
+        return [a.tag || a.user, ...vals, r.up, r.down, r.int];
+      });
+      download(`${ui.site}-${ui.type}-${m}.csv`, csvOf([["Asset", ...Array.from({length:n}, (_, i) => i+1), "UP%", "DOWN%", "INT%"], ...rows]), "text/csv");
+      break;
+    }
+    case "export-inv": {
+      const rows = state.assets.map(a => [a.site, a.type, a.tag, a.user, a.position, a.model, a.remarks]);
+      download("pcl-it-inventory.csv", csvOf([["Site","Type","Tag","User/Main ISP","Position/Backup ISP","Model","Remarks"], ...rows]), "text/csv");
+      break;
+    }
+    case "backup":
+      download(`pcl-it-monitor-backup-${thisMonth()}.json`, JSON.stringify(state, null, 2), "application/json"); break;
+  }
+});
+
+document.addEventListener("change", e => {
+  const t = e.target;
+  if (t.id === "month") { ui.month = t.value || thisMonth(); render(); return; }
+  if (t.dataset.ui) {
+    ui[t.dataset.ui] = ["week","day"].includes(t.dataset.ui) ? Number(t.value) : t.value;
+    render(); return;
+  }
+  if (t.dataset.f) { ui.f[t.dataset.f] = t.value; renderInventory(); return; }
+  if (t.dataset.cell) {
+    const m = ui.month;
+    state.logs[m] = state.logs[m] || {};
+    const L = state.logs[m][t.dataset.id] = state.logs[m][t.dataset.id] || {};
+    if (t.value) L[t.dataset.day] = t.value; else delete L[t.dataset.day];
+    save(); renderMonitor(); return;
+  }
+  if (t.name === "type" && t.form && t.form.id === "assetForm") {
+    const net = t.value === "Internet";
+    t.form.querySelector('[data-lbl="user"]').textContent = net ? "Main ISP" : "User";
+    t.form.querySelector('[data-lbl="position"]').textContent = net ? "Backup ISP" : "Position";
     return;
   }
-  if(t.id==='fadd'){
-    const date=$('#fdate').value, truck=$('#ftruck').value;
-    if(!date||!truck) return alert('Pick a date and a truck (import the fleet first if the list is empty).');
-    let cz=$('#fcause').value;if(cz==='__new'){cz=addCause();if(cz==null)return}
-    st.events.push({date,truck,cause:cz,note:$('#fnote').value.trim()});
-    $('#fcause').value=''; $('#fnote').value=''; save(); render(); return;
-  }
-  if(t.id==='cok'){const v=$('#csel').value;const c=v==='__new'?addCause():v;if(c==null)return;st.events.push({date:pend.d,truck:pend.tr,cause:c,note:''});pend=null;$('#cdlg').close();save();render();return}
-  if(t.id==='cno'){pend=null;$('#cdlg').close();return}
-  if(t.id==='imp'){doImport();return}
-  if(t.id==='clr'){
-    if(confirm('Erase ALL fleet and downtime data stored in this browser?')){st={fleet:[],events:[]};save();render()}
+  if (t.dataset.restore) {
+    const file = t.files[0]; if (!file) return;
+    file.text().then(txt => {
+      let d; try { d = JSON.parse(txt); } catch (err) { d = null; }
+      if (!d || !Array.isArray(d.assets) || typeof d.logs !== "object") { toast("That is not a valid backup file"); return; }
+      if (!confirm("Replace all current data with this backup?")) return;
+      state = d; save(); render(); toast("Backup restored");
+    });
   }
 });
-document.body.addEventListener('change',e=>{
-  const i=e.target.dataset.i;
-  if(i!==undefined){let v=e.target.value.trim();if(v==='__new')v=addCause();if(v==null){render();return}st.events[i][e.target.dataset.f]=v;save();render()}
+document.addEventListener("input", e => {
+  if (e.target.dataset.f === "q") { ui.f.q = e.target.value; renderInventory(); const i = document.querySelector('[data-f="q"]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
 });
-document.body.addEventListener('input',e=>{
-  if(e.target.id==='srch'){q=e.target.value.toLowerCase();drawGrid()}
+document.addEventListener("submit", e => {
+  if (e.target.id !== "assetForm") return;
+  e.preventDefault();
+  const d = Object.fromEntries(new FormData(e.target));
+  const rec = { type: d.type, site: d.site, tag: d.tag.trim(), user: d.user.trim(), position: d.position.trim(),
+    model: d.model.trim(), remarks: d.remarks.trim() };
+  if (d.id) { Object.assign(state.assets.find(a => a.id === d.id) || {}, rec); toast("Changes saved"); }
+  else { state.assets.push({ id: uid(), ...rec }); toast("Asset added"); }
+  ui.form = null; save(); render();
 });
 
-$('#month').value=month;
-$('#month').onchange=e=>{month=e.target.value||month;render()};
-$('#nav').innerHTML=TABS.map(([k,l])=>`<button data-t="${k}">${l}</button>`).join('');
 render();
 </script>
-</body></html>
+</body>
+</html>
