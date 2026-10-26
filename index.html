@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Truck Uptime Tracker</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--ink:#1d2330;--mute:#6b7280;--line:#e3e6eb;--up:#16a34a;--down:#dc2626;--acc:#1f4e79}
+@media (prefers-color-scheme: dark){:root{--bg:#12151b;--card:#1b2029;--ink:#e6e9ef;--mute:#9aa3b2;--line:#2a313c;--acc:#5b8fc7}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+h1{font-size:17px;margin:0 auto 0 0}
+nav button{border:0;background:none;padding:6px 10px;border-radius:6px;cursor:pointer;color:var(--mute);font:inherit}
+nav button.on{background:var(--acc);color:#fff}
+input,select,textarea,.go{font:inherit;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink)}
+.go{cursor:pointer}
+main{padding:16px;max-width:1400px;margin:auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card b{display:block;font-size:22px}
+.card span{color:var(--mute);font-size:12px}
+table{border-collapse:collapse;width:100%;background:var(--card)}
+th,td{border:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap}
+th{background:var(--bg);position:sticky;top:0;z-index:2}
+.grid{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px;margin-bottom:16px}
+td.c,th.c{text-align:center;min-width:40px;padding:4px 2px}
+td.c{cursor:pointer;user-select:none}
+td.d{background:var(--down);color:#fff;font-weight:600}
+.sticky1,.sticky2{position:sticky;z-index:1;background:var(--card)}
+.sticky1{left:0;min-width:70px}
+.sticky2{left:70px;min-width:90px}
+th.sticky1,th.sticky2{z-index:3;background:var(--bg)}
+.bar{height:8px;background:var(--line);border-radius:4px;min-width:120px}
+.bar i{display:block;height:100%;background:var(--up);border-radius:4px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.hide{display:none}
+.muted{color:var(--mute)}
+.empty{padding:30px;text-align:center;color:var(--mute)}
+textarea{width:100%;height:200px;font:12px monospace}
+.chart{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:16px}
+.chart b{font-size:13px}
+.chart svg{display:block}
+.btn-red{color:var(--down);background:none;border:1px solid var(--down);border-radius:6px;padding:3px 8px;cursor:pointer;font:inherit}
+</style></head>
+<body>
+<header>
+  <h1>Truck Uptime Tracker</h1>
+  <input type="month" id="month">
+  <nav id="nav"></nav>
+</header>
+<main>
+  <section id="v-dash"></section>
+
+  <section id="v-daily" class="hide">
+    <div class="row"><input id="srch" placeholder="Search truck or plate"><span class="muted">Tap a cell to mark DOWN; tap again to clear. Cause is optional.</span></div>
+    <div id="dgrid"></div>
+  </section>
+
+  <section id="v-log" class="hide">
+    <div class="row">
+      <input type="date" id="fdate">
+      <select id="ftruck"></select>
+      <input id="fcause" list="causes" placeholder="Cause">
+      <input id="fnote" placeholder="Explanation" size="30">
+      <button class="go" id="fadd">Add entry</button>
+    </div>
+    <div id="logt"></div>
+    <datalist id="causes"></datalist>
+  </section>
+
+  <section id="v-data" class="hide">
+    <p class="muted" id="counts"></p>
+    <div class="row">
+      <select id="mode"><option value="fleet">Fleet (TRUCK MASTER sheet)</option><option value="down">Downtime (DOWNTIME DETAILS sheet)</option></select>
+      <button class="go" id="imp">Import pasted rows</button>
+      <button class="go" id="clr">Clear all data</button>
+    </div>
+    <textarea id="paste" placeholder="In Excel, select the sheet's columns, press Ctrl+C, then paste here with Ctrl+V."></textarea>
+    <p class="muted">Fleet columns: Truck, Plate, Brand, Model, Size (replaces the current fleet). Downtime columns: Date, Truck, Cause, Explanation (added; exact duplicates are skipped). Header rows are skipped automatically.</p>
+  </section>
+</main>
+
+<script>
+const KEY='uptime-tracker-v1';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let st={fleet:[],events:[]};
+try{st=Object.assign(st,JSON.parse(localStorage.getItem(KEY))||{})}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){alert('Could not save in this browser.')}};
+const pad=n=>String(n).padStart(2,'0');
+const now=new Date(), todayStr=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+let month=todayStr.slice(0,7), tab='dash', q='';
+const TABS=[['dash','Dashboard'],['daily','Daily grid'],['log','Downtime log'],['data','Fleet & import']];
+
+const daysIn=()=>{const [y,m]=month.split('-').map(Number);return new Date(y,m,0).getDate()};
+const ds=d=>`${month}-${pad(d)}`;
+const byDay=()=>{const m={};st.events.forEach(e=>{(m[e.date]=m[e.date]||new Set()).add(e.truck)});return m};
+const dayStat=(d,map)=>{const k=ds(d);if(k>todayStr)return null;const n=st.fleet.length,dn=map[k]?map[k].size:0;return{down:dn,up:n?(n-dn)/n*100:null}};
+const pct=v=>v==null?'—':v.toFixed(2)+'%';
+
+function bars(labels,vals,o){
+  const W=900,H=240,P=44,B=22,T=12;
+  const nn=vals.filter(v=>v!=null);
+  const mn=nn.length?Math.min(...nn):0, mx0=nn.length?Math.max(...nn):0;
+  const lo=o.zero?0:Math.max(0,Math.floor(mn)-1), hi=Math.max(o.max??mx0,lo+1);
+  const Y=v=>H-B-((v-lo)/(hi-lo))*(H-B-T), bw=(W-P)/Math.max(labels.length,1);
+  const rects=vals.map((v,i)=>v==null?'':`<rect x="${(P+i*bw+bw*.15).toFixed(1)}" y="${Y(v).toFixed(1)}" width="${(bw*.7).toFixed(1)}" height="${Math.max(0,Y(lo)-Y(v)).toFixed(1)}" fill="${o.color}"><title>${labels[i]}: ${o.fmt(v)}</title></rect>`).join('');
+  const lab=labels.map((l,i)=>`<text x="${(P+i*bw+bw/2).toFixed(1)}" y="${H-6}" font-size="10" text-anchor="middle" fill="var(--mute)">${l}</text>`).join('');
+  const tk=[lo,(lo+hi)/2,hi].map(t=>`<text x="${P-6}" y="${(Y(t)+4).toFixed(1)}" font-size="10" text-anchor="end" fill="var(--mute)">${o.fmt(t)}</text><line x1="${P}" x2="${W}" y1="${Y(t).toFixed(1)}" y2="${Y(t).toFixed(1)}" stroke="var(--line)"/>`).join('');
+  return `<div class="chart"><b>${o.title}</b><svg viewBox="0 0 ${W} ${H}" width="100%">${tk}${rects}${lab}</svg></div>`;
+}
+function monthUp(ym){
+  const n=st.fleet.length; if(!n) return null;
+  const map=byDay(), [y,m]=ym.split('-').map(Number), D=new Date(y,m,0).getDate();
+  let s=0,c=0;
+  for(let d=1;d<=D;d++){const k=`${ym}-${pad(d)}`; if(k>todayStr) break; s+=(n-(map[k]?map[k].size:0))/n*100; c++}
+  return c?s/c:null;
+}
+
+function rDash(){
+  const el=$('#v-dash');
+  if(!st.fleet.length){el.innerHTML='<div class="empty">Import your fleet first (Fleet & import tab).</div>';return}
+  const map=byDay(),D=daysIn(),n=st.fleet.length;
+  const me=st.events.filter(e=>e.date.startsWith(month));
+  const days=[...Array(D)].map((_,i)=>({d:i+1,s:dayStat(i+1,map)})).filter(x=>x.s);
+  const ups=days.filter(x=>x.s.up!=null).map(x=>x.s.up);
+  const avg=ups.length?ups.reduce((a,b)=>a+b,0)/ups.length:null;
+  const wk=[[1,7],[8,14],[15,21],[22,D]].filter(([a])=>ds(a)<=todayStr).map(([a,b],i)=>{
+    const ev=me.filter(e=>+e.date.slice(8)>=a&&+e.date.slice(8)<=b);
+    const u=days.filter(x=>x.d>=a&&x.d<=b&&x.s.up!=null).map(x=>x.s.up);
+    return `<tr><td>Week ${i+1}</td><td>${a}–${b}</td><td>${pct(u.length?u.reduce((p,c)=>p+c,0)/u.length:null)}</td><td>${ev.length}</td><td>${new Set(ev.map(e=>e.truck)).size}</td></tr>`;
+  }).join('');
+  const dr=days.map(({d,s})=>`<tr><td>${ds(d)}</td><td>${s.down}</td><td>${pct(s.up)}</td><td><div class="bar"><i style="width:${s.up||0}%"></i></div></td></tr>`).join('');
+  const lbl=[...Array(D)].map((_,i)=>i+1), all=[...Array(D)].map((_,i)=>dayStat(i+1,map));
+  const ms=[...new Set([...st.events.map(e=>e.date.slice(0,7)),month])].sort();
+  const charts=`${bars(lbl,all.map(s=>s?s.up:null),{max:100,fmt:v=>v.toFixed(1)+'%',color:'var(--up)',title:'Daily uptime %'})}
+    ${bars(lbl,all.map(s=>s?s.down:null),{zero:true,fmt:v=>Math.round(v)+'',color:'var(--down)',title:'Units down per day'})}
+    ${bars(ms,ms.map(monthUp),{max:100,fmt:v=>v.toFixed(1)+'%',color:'var(--acc)',title:'Monthly uptime %'})}`;
+  el.innerHTML=`<div class="cards">
+    <div class="card"><span>Average uptime</span><b>${pct(avg)}</b></div>
+    <div class="card"><span>Down events</span><b>${me.length}</b></div>
+    <div class="card"><span>Trucks affected</span><b>${new Set(me.map(e=>e.truck)).size}</b></div>
+    <div class="card"><span>Fleet size</span><b>${n}</b></div></div>
+    ${charts}
+    <h3>Weekly</h3>
+    <div class="grid"><table><tr><th>Week</th><th>Days</th><th>Avg uptime</th><th>Down events</th><th>Trucks affected</th></tr>${wk}</table></div>
+    <h3>Daily</h3>
+    <div class="grid"><table><tr><th>Date</th><th>Units down</th><th>Uptime</th><th></th></tr>${dr}</table></div>`;
+}
+
+function drawGrid(){
+  const g=$('#dgrid');
+  if(!st.fleet.length){g.innerHTML='<div class="empty">Import your fleet first (Fleet & import tab).</div>';return}
+  const map=byDay(),D=daysIn(),on=new Set(st.events.map(e=>e.date+'|'+e.truck));
+  const days=[...Array(D)].map((_,i)=>i+1);
+  const up=days.map(d=>{const s=dayStat(d,map);return `<td class="c">${s?Math.round(s.up)+'%':''}</td>`}).join('');
+  const body=st.fleet.filter(t=>!q||(t.truck+' '+t.plate).toLowerCase().includes(q)).map(t=>
+    `<tr><td class="sticky1">${esc(t.truck)}</td><td class="sticky2">${esc(t.plate)}</td>`+
+    days.map(d=>{const k=ds(d),x=on.has(k+'|'+t.truck);return `<td class="c${x?' d':''}" data-d="${k}" data-t="${esc(t.truck)}">${x?'D':''}</td>`}).join('')+'</tr>').join('');
+  g.innerHTML=`<div class="grid"><table>
+    <tr><th class="sticky1">Truck</th><th class="sticky2">Plate</th>${days.map(d=>`<th class="c">${d}</th>`).join('')}</tr>
+    <tr><td class="sticky1"><b>Uptime</b></td><td class="sticky2"></td>${up}</tr>${body}</table></div>`;
+}
+
+function rLog(){
+  const plate=t=>(st.fleet.find(f=>f.truck===t)||{}).plate||'';
+  const rows=st.events.map((e,i)=>({e,i})).filter(x=>x.e.date.startsWith(month))
+    .sort((a,b)=>a.e.date.localeCompare(b.e.date)||a.e.truck.localeCompare(b.e.truck));
+  $('#logt').innerHTML=rows.length?`<div class="grid"><table>
+    <tr><th>Date</th><th>Truck</th><th>Plate</th><th>Cause</th><th>Explanation</th><th></th></tr>
+    ${rows.map(({e,i})=>`<tr><td>${e.date}</td><td>${esc(e.truck)}</td><td>${esc(plate(e.truck))}</td>
+    <td><input list="causes" data-i="${i}" data-f="cause" value="${esc(e.cause)}"></td>
+    <td><input data-i="${i}" data-f="note" value="${esc(e.note)}" size="40"></td>
+    <td><button class="btn-red" data-del="${i}">Delete</button></td></tr>`).join('')}</table></div>`
+    :'<div class="empty">No downtime logged for this month.</div>';
+  $('#causes').innerHTML=[...new Set(st.events.map(e=>e.cause).filter(Boolean))].sort().map(c=>`<option value="${esc(c)}">`).join('');
+  $('#ftruck').innerHTML=st.fleet.map(t=>`<option value="${esc(t.truck)}">${esc(t.truck)} · ${esc(t.plate)}</option>`).join('');
+  if(!$('#fdate').value.startsWith(month)) $('#fdate').value=month===todayStr.slice(0,7)?todayStr:ds(1);
+}
+
+function rData(){
+  $('#counts').textContent=`Fleet: ${st.fleet.length} trucks · Downtime entries stored: ${st.events.length}`;
+}
+
+function rowsOf(txt){
+  return txt.trim().split(/\r?\n/).filter(Boolean).map(l=>(l.includes('\t')?l.split('\t'):l.split(',')).map(s=>s.trim().replace(/^"|"$/g,'')));
+}
+const tn=s=>{const m=String(s).match(/\d+/);return m?'# '+m[0].padStart(3,'0'):''};
+const dn=s=>{
+  let m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/); if(m) return m[0];
+  m=String(s).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  return m?`${m[3]}-${pad(m[1])}-${pad(m[2])}`:'';
+};
+
+function doImport(){
+  const rows=rowsOf($('#paste').value), mode=$('#mode').value;
+  if(!$('#paste').value.trim()) return alert('Paste rows first.');
+  if(mode==='fleet'){
+    const f=rows.map(r=>({truck:tn(r[0]),plate:r[1]||'',brand:r[2]||'',model:r[3]||'',size:r[4]||''})).filter(t=>t.truck);
+    if(!f.length) return alert('No truck rows found.');
+    st.fleet=f; save(); $('#paste').value=''; alert(`Imported ${f.length} trucks.`);
+  } else {
+    const seen=new Set(st.events.map(e=>[e.date,e.truck,e.cause,e.note].join('|')));
+    let added=0,skipped=0;
+    rows.forEach(r=>{
+      const date=dn(r[0]), truck=tn(r[1]);
+      if(!date||!truck){skipped++;return}
+      const cause=r[2]||'', note=r[3]||'', k=[date,truck,cause,note].join('|');
+      if(seen.has(k)){skipped++;return}
+      seen.add(k); st.events.push({date,truck,cause,note}); added++;
+    });
+    save(); $('#paste').value=''; alert(`Imported ${added} entries (${skipped} skipped).`);
+  }
+  render();
+}
+
+function render(){
+  document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===tab));
+  TABS.forEach(([k])=>$('#v-'+k).classList.toggle('hide',k!==tab));
+  if(tab==='dash')rDash();
+  if(tab==='daily')drawGrid();
+  if(tab==='log')rLog();
+  if(tab==='data')rData();
+}
+
+document.body.addEventListener('click',e=>{
+  const t=e.target;
+  const nb=t.closest('#nav button');
+  if(nb){tab=nb.dataset.t;render();return}
+  const cell=t.closest('td[data-d]');
+  if(cell){
+    const d=cell.dataset.d, tr=cell.dataset.t;
+    if(st.events.some(x=>x.date===d&&x.truck===tr)) st.events=st.events.filter(x=>!(x.date===d&&x.truck===tr));
+    else{
+      const c=prompt(`Cause for ${tr} on ${d}? (optional)`,'');
+      if(c===null) return;
+      st.events.push({date:d,truck:tr,cause:c.trim(),note:''});
+    }
+    save(); render(); return;
+  }
+  if(t.dataset.del!==undefined){
+    if(confirm('Delete this downtime entry?')){st.events.splice(+t.dataset.del,1);save();render()}
+    return;
+  }
+  if(t.id==='fadd'){
+    const date=$('#fdate').value, truck=$('#ftruck').value;
+    if(!date||!truck) return alert('Pick a date and a truck (import the fleet first if the list is empty).');
+    st.events.push({date,truck,cause:$('#fcause').value.trim(),note:$('#fnote').value.trim()});
+    $('#fcause').value=''; $('#fnote').value=''; save(); render(); return;
+  }
+  if(t.id==='imp'){doImport();return}
+  if(t.id==='clr'){
+    if(confirm('Erase ALL fleet and downtime data stored in this browser?')){st={fleet:[],events:[]};save();render()}
+  }
+});
+document.body.addEventListener('change',e=>{
+  const i=e.target.dataset.i;
+  if(i!==undefined){st.events[i][e.target.dataset.f]=e.target.value.trim();save()}
+});
+document.body.addEventListener('input',e=>{
+  if(e.target.id==='srch'){q=e.target.value.toLowerCase();drawGrid()}
+});
+
+$('#month').value=month;
+$('#month').onchange=e=>{month=e.target.value||month;render()};
+$('#nav').innerHTML=TABS.map(([k,l])=>`<button data-t="${k}">${l}</button>`).join('');
+render();
+</script>
+</body></html>
