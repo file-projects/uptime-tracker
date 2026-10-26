@@ -58,12 +58,16 @@ textarea{width:100%;height:200px;font:12px monospace}
     <div class="row">
       <input type="date" id="fdate">
       <select id="ftruck"></select>
-      <input id="fcause" list="causes" placeholder="Cause">
+      <select id="fcause"></select>
       <input id="fnote" placeholder="Explanation" size="30">
       <button class="go" id="fadd">Add entry</button>
     </div>
     <div id="logt"></div>
-    <datalist id="causes"></datalist>
+    <dialog id="cdlg" style="background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:16px">
+      <h3 style="margin-top:0">Cause of downtime</h3>
+      <select id="csel"></select>
+      <div class="row"><button class="go" id="cok">Mark down</button><button class="go" id="cno">Cancel</button></div>
+    </dialog>
   </section>
 
   <section id="v-data" class="hide">
@@ -89,6 +93,10 @@ const pad=n=>String(n).padStart(2,'0');
 const now=new Date(), todayStr=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
 let month=todayStr.slice(0,7), tab='dash', q='';
 const TABS=[['dash','Dashboard'],['daily','Daily grid'],['log','Downtime log'],['data','Fleet & import']];
+const CAUSES=['MECHANICAL','ELECTRICAL','TIRE','ACCIDENT / BODY DAMAGE','PREVENTIVE MAINTENANCE','PARTS UNAVAILABLE','ENGINE','RADIATOR / ACCIDENT','COOLING SYSTEM','ENGINE / TRANSMISSION','ELECTRICAL / MCU','REPAINTING','BATTERY'];
+let pend=null;
+const causeOpts=sel=>{const all=[...new Set([...CAUSES,...(st.custom||[])])];if(sel&&!all.includes(sel))all.push(sel);return '<option value="">— select —</option>'+all.map(c=>`<option value="${esc(c)}"${c===sel?' selected':''}>${esc(c)}</option>`).join('')+'<option value="__new">+ Add new cause…</option>'};
+function addCause(){const n=(prompt('New cause name:')||'').trim().toUpperCase();if(!n)return null;st.custom=st.custom||[];if(![...CAUSES,...st.custom].includes(n))st.custom.push(n);save();return n}
 
 const daysIn=()=>{const [y,m]=month.split('-').map(Number);return new Date(y,m,0).getDate()};
 const ds=d=>`${month}-${pad(d)}`;
@@ -167,11 +175,11 @@ function rLog(){
   $('#logt').innerHTML=rows.length?`<div class="grid"><table>
     <tr><th>Date</th><th>Truck</th><th>Plate</th><th>Cause</th><th>Explanation</th><th></th></tr>
     ${rows.map(({e,i})=>`<tr><td>${e.date}</td><td>${esc(e.truck)}</td><td>${esc(plate(e.truck))}</td>
-    <td><input list="causes" data-i="${i}" data-f="cause" value="${esc(e.cause)}"></td>
+    <td><select data-i="${i}" data-f="cause">${causeOpts(e.cause)}</select></td>
     <td><input data-i="${i}" data-f="note" value="${esc(e.note)}" size="40"></td>
     <td><button class="btn-red" data-del="${i}">Delete</button></td></tr>`).join('')}</table></div>`
     :'<div class="empty">No downtime logged for this month.</div>';
-  $('#causes').innerHTML=[...new Set(st.events.map(e=>e.cause).filter(Boolean))].sort().map(c=>`<option value="${esc(c)}">`).join('');
+  $('#fcause').innerHTML=causeOpts('');
   $('#ftruck').innerHTML=st.fleet.map(t=>`<option value="${esc(t.truck)}">${esc(t.truck)} · ${esc(t.plate)}</option>`).join('');
   if(!$('#fdate').value.startsWith(month)) $('#fdate').value=month===todayStr.slice(0,7)?todayStr:ds(1);
 }
@@ -230,9 +238,7 @@ document.body.addEventListener('click',e=>{
     const d=cell.dataset.d, tr=cell.dataset.t;
     if(st.events.some(x=>x.date===d&&x.truck===tr)) st.events=st.events.filter(x=>!(x.date===d&&x.truck===tr));
     else{
-      const c=prompt(`Cause for ${tr} on ${d}? (optional)`,'');
-      if(c===null) return;
-      st.events.push({date:d,truck:tr,cause:c.trim(),note:''});
+      pend={d,tr};$('#csel').innerHTML=causeOpts('');$('#cdlg').showModal();return;
     }
     save(); render(); return;
   }
@@ -243,9 +249,12 @@ document.body.addEventListener('click',e=>{
   if(t.id==='fadd'){
     const date=$('#fdate').value, truck=$('#ftruck').value;
     if(!date||!truck) return alert('Pick a date and a truck (import the fleet first if the list is empty).');
-    st.events.push({date,truck,cause:$('#fcause').value.trim(),note:$('#fnote').value.trim()});
+    let cz=$('#fcause').value;if(cz==='__new'){cz=addCause();if(cz==null)return}
+    st.events.push({date,truck,cause:cz,note:$('#fnote').value.trim()});
     $('#fcause').value=''; $('#fnote').value=''; save(); render(); return;
   }
+  if(t.id==='cok'){const v=$('#csel').value;const c=v==='__new'?addCause():v;if(c==null)return;st.events.push({date:pend.d,truck:pend.tr,cause:c,note:''});pend=null;$('#cdlg').close();save();render();return}
+  if(t.id==='cno'){pend=null;$('#cdlg').close();return}
   if(t.id==='imp'){doImport();return}
   if(t.id==='clr'){
     if(confirm('Erase ALL fleet and downtime data stored in this browser?')){st={fleet:[],events:[]};save();render()}
@@ -253,7 +262,7 @@ document.body.addEventListener('click',e=>{
 });
 document.body.addEventListener('change',e=>{
   const i=e.target.dataset.i;
-  if(i!==undefined){st.events[i][e.target.dataset.f]=e.target.value.trim();save()}
+  if(i!==undefined){let v=e.target.value.trim();if(v==='__new')v=addCause();if(v==null){render();return}st.events[i][e.target.dataset.f]=v;save();render()}
 });
 document.body.addEventListener('input',e=>{
   if(e.target.id==='srch'){q=e.target.value.toLowerCase();drawGrid()}
